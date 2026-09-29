@@ -1,0 +1,3 @@
+obj\Debug\net9.0\Protos/StreamList.cs \
+obj\Debug\net9.0\Protos/StreamListGrpc.cs: C:/Users/Jespe/.nuget/packages/grpc.tools/2.83.0/build/native/include/google/protobuf/duration.proto\
+ Protos/stream_list.proto

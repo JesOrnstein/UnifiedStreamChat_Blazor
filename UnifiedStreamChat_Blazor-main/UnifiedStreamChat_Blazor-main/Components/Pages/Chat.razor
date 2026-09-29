@@ -1,0 +1,560 @@
+@page "/"
+@page "/chat"
+@rendermode InteractiveServer
+@using UnifiedStreamChat.Models
+@using UnifiedStreamChat.Services
+@implements IDisposable
+
+@inject IHttpContextAccessor HttpContextAccessor
+@inject TwitchConnectionManager TwitchConnectionManager
+@inject YouTubeConnectionManager YouTubeConnectionManager
+@inject KickConnectionManager KickConnectionManager
+
+<PageTitle>Unified Stream Chat</PageTitle>
+
+<div class="unified-chat">
+
+    <header class="app-header">
+        <div class="brand">
+            <div class="brand-icon">
+                U
+            </div>
+
+            <div>
+                <div class="brand-name">
+                    UnifiedStreamChat
+                </div>
+
+                <div class="brand-subtitle">
+                    All your live chats in one place
+                </div>
+            </div>
+        </div>
+
+        <button class="settings-button"
+                type="button"
+                title="Settings">
+            ⚙
+        </button>
+    </header>
+
+    <div class="app-content">
+
+        <aside class="platform-sidebar">
+
+            <div class="sidebar-heading">
+                Platforms
+            </div>
+
+            <div class="platform-card twitch-card">
+
+                <div class="platform-info">
+
+                    <div class="platform-icon twitch-icon">
+                        T
+                    </div>
+
+                    <div>
+                        <div class="platform-name">
+                            Twitch
+                        </div>
+
+                        @if (_twitchChatService is not null &&
+                             _twitchChatService.IsConnected)
+                        {
+                            <div class="platform-account">
+                                @_twitchChatService.DisplayName
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="platform-account">
+                                Not connected
+                            </div>
+                        }
+                    </div>
+
+                </div>
+
+                @if (_twitchChatService is not null &&
+                     _twitchChatService.IsConnected)
+                {
+                    <div class="platform-actions">
+
+                        <span class="connection-status connected">
+                            ● Connected
+                        </span>
+
+                        <button class="disconnect-button"
+                                @onclick="DisconnectTwitch">
+                            Disconnect
+                        </button>
+
+                    </div>
+                }
+                else
+                {
+                    <a href="/auth/twitch/login" 
+                       class="connect-button twitch-connect" 
+                       data-enhance-nav="false"
+                       style="display: block; width: 100%; text-align: center; text-decoration: none; box-sizing: border-box;">
+                        Connect
+                    </a>
+                }
+
+            </div>
+
+            <div class="platform-card youtube-card">
+
+                <div class="platform-info">
+
+                    <div class="platform-icon youtube-icon">
+                        ▶
+                    </div>
+
+                    <div>
+                        <div class="platform-name">
+                            YouTube
+                        </div>
+
+                        @if (_youtubeChatService is not null &&
+                             _youtubeChatService.IsConnected)
+                        {
+                            @if (_youtubeChatService.HasActiveLiveChat)
+                            {
+                                <div class="platform-account">
+                                    Live chat active
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="platform-account">
+                                    No active livestream
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="platform-account">
+                                Not connected
+                            </div>
+                        }
+                    </div>
+
+                </div>
+
+                @if (_youtubeChatService is not null &&
+                     _youtubeChatService.IsConnected)
+                {
+                    <div class="platform-actions">
+
+                        <span class="connection-status connected">
+                            ● Connected
+                        </span>
+
+                        <button class="disconnect-button"
+                                @onclick="DisconnectYouTube">
+                            Disconnect
+                        </button>
+
+                    </div>
+                }
+                else
+                {
+                    <a href="/auth/youtube/login" 
+                       class="connect-button youtube-connect" 
+                       data-enhance-nav="false"
+                       style="display: block; width: 100%; text-align: center; text-decoration: none; box-sizing: border-box;">
+                        Connect
+                    </a>
+                }
+
+            </div>
+
+            <div class="platform-card kick-card">
+
+                <div class="platform-info">
+
+                    <div class="platform-icon kick-icon">
+                        K
+                    </div>
+
+                    <div>
+                        <div class="platform-name">
+                            Kick
+                        </div>
+
+                        @if (_kickChatService is not null &&
+                             _kickChatService.IsConnected)
+                        {
+                            <div class="platform-account">
+                                @_kickChatService.DisplayName
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="platform-account">
+                                Connect your account
+                            </div>
+                        }
+                    </div>
+
+                </div>
+
+                @if (_kickChatService is not null &&
+                     _kickChatService.IsConnected)
+                {
+                    <div class="platform-actions">
+
+                        <span class="connection-status connected">
+                            ● Connected
+                        </span>
+
+                        <button class="disconnect-button"
+                                @onclick="DisconnectKick">
+                            Disconnect
+                        </button>
+
+                    </div>
+                }
+                else
+                {
+                    <a href="/kick-connect" 
+                       class="connect-button kick-connect" 
+                       data-enhance-nav="false"
+                       style="display: block; width: 100%; text-align: center; text-decoration: none; box-sizing: border-box;">
+                        Connect
+                    </a>
+                }
+
+            </div>
+
+        </aside>
+
+        <main class="chat-section">
+
+            <div class="chat-header">
+
+                <div>
+                    <h1>Live Chat</h1>
+
+                    <div class="chat-subtitle">
+                        Messages from all connected platforms
+                    </div>
+                </div>
+
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    LIVE
+                </div>
+
+            </div>
+
+            <div class="chat-window">
+
+                @if (_messages.Count == 0)
+                {
+                    <div class="empty-chat">
+
+                        <div class="empty-chat-icon">
+                            💬
+                        </div>
+
+                        <div class="empty-chat-title">
+                            Waiting for messages
+                        </div>
+
+                        <div class="empty-chat-text">
+                            Messages from your connected platforms will appear here.
+                        </div>
+
+                    </div>
+                }
+                else
+                {
+                    @foreach (var chatMessage in _messages)
+                    {
+                        <div class="chat-message">
+
+                            <div class="@GetPlatformBadgeClass(chatMessage.Platform)">
+                                @GetPlatformShortName(chatMessage.Platform)
+                            </div>
+
+                            <div class="message-content">
+
+                                <span class="message-badges">
+                                    @foreach (var badge in chatMessage.Badges)
+                                    {
+                                        <img src="@badge.ImageUrl" alt="@badge.Title" title="@badge.Title" class="chat-badge" style="height: 1.2em; vertical-align: middle; margin-right: 4px;" />
+                                    }
+                                </span>
+
+                                <span class="message-username">
+                                    @chatMessage.Username
+                                </span>
+
+                                <span class="message-time">
+                                    @chatMessage.Timestamp.ToString("HH:mm:ss")
+                                </span>
+
+                                <span class="message-text">
+                                    @chatMessage.Message
+                                </span>
+
+                            </div>
+
+                        </div>
+                    }
+                }
+
+            </div>
+
+            <div class="chat-footer">
+
+                <div>
+                    @ConnectedPlatformCount platform@(ConnectedPlatformCount == 1 ? "" : "s") connected
+                </div>
+
+                <div class="footer-status">
+                    <span class="footer-dot"></span>
+                    Receiving live messages
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+</div>
+
+@code {
+    private readonly List<ChatMessage> _messages = new();
+
+    private TwitchChatService? _twitchChatService;
+    private YouTubeChatService? _youtubeChatService;
+    private KickChatService? _kickChatService;
+
+    private string? _sessionId;
+
+    private int ConnectedPlatformCount
+    {
+        get
+        {
+            var count = 0;
+
+            if (_twitchChatService is not null &&
+                _twitchChatService.IsConnected)
+            {
+                count++;
+            }
+
+            if (_youtubeChatService is not null &&
+                _youtubeChatService.IsConnected)
+            {
+                count++;
+            }
+
+            if (_kickChatService is not null &&
+                _kickChatService.IsConnected)
+            {
+                count++;
+            }
+
+            return count;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        _sessionId =
+            HttpContextAccessor.HttpContext?
+                .Session
+                .GetString("SessionId");
+
+        if (string.IsNullOrWhiteSpace(_sessionId))
+        {
+            return;
+        }
+
+        LoadTwitchConnection();
+        LoadYouTubeConnection();
+        LoadKickConnection();
+    }
+
+    private void LoadTwitchConnection()
+    {
+        if (string.IsNullOrWhiteSpace(_sessionId))
+        {
+            return;
+        }
+
+        if (TwitchConnectionManager.TryGetConnection(
+                _sessionId,
+                out var connection))
+        {
+            _twitchChatService = connection;
+
+            if (_twitchChatService is not null)
+            {
+                _twitchChatService.MessageReceived +=
+                    OnMessageReceived;
+            }
+        }
+    }
+
+    private void LoadYouTubeConnection()
+    {
+        if (string.IsNullOrWhiteSpace(_sessionId))
+        {
+            return;
+        }
+
+        if (YouTubeConnectionManager.TryGetConnection(
+                _sessionId,
+                out var connection))
+        {
+            _youtubeChatService = connection;
+
+            if (_youtubeChatService is not null)
+            {
+                _youtubeChatService.MessageReceived +=
+                    OnMessageReceived;
+            }
+        }
+    }
+
+    private void LoadKickConnection()
+    {
+        if (string.IsNullOrWhiteSpace(_sessionId))
+        {
+            return;
+        }
+
+        _kickChatService = KickConnectionManager.GetConnection(_sessionId);
+
+        if (_kickChatService is not null)
+        {
+            _kickChatService.MessageReceived +=
+                OnMessageReceived;
+        }
+    }
+
+    private async Task DisconnectTwitch()
+    {
+        if (string.IsNullOrWhiteSpace(_sessionId))
+        {
+            return;
+        }
+
+        if (_twitchChatService is not null)
+        {
+            _twitchChatService.MessageReceived -=
+                OnMessageReceived;
+        }
+
+        await TwitchConnectionManager
+            .RemoveConnectionAsync(_sessionId);
+
+        _twitchChatService = null;
+
+        StateHasChanged();
+    }
+
+    private async Task DisconnectYouTube()
+    {
+        if (string.IsNullOrWhiteSpace(_sessionId))
+        {
+            return;
+        }
+
+        if (_youtubeChatService is not null)
+        {
+            _youtubeChatService.MessageReceived -=
+                OnMessageReceived;
+        }
+
+        await YouTubeConnectionManager
+            .RemoveConnectionAsync(_sessionId);
+
+        _youtubeChatService = null;
+
+        StateHasChanged();
+    }
+
+    private Task DisconnectKick()
+    {
+        if (string.IsNullOrWhiteSpace(_sessionId))
+        {
+            return Task.CompletedTask;
+        }
+
+        if (_kickChatService is not null)
+        {
+            _kickChatService.MessageReceived -=
+                OnMessageReceived;
+        }
+
+        KickConnectionManager.RemoveConnection(_sessionId);
+
+        _kickChatService = null;
+
+        StateHasChanged();
+
+        return Task.CompletedTask;
+    }
+
+    private void OnMessageReceived(
+        ChatMessage chatMessage)
+    {
+        _ = InvokeAsync(() =>
+        {
+            _messages.Add(chatMessage);
+
+            StateHasChanged();
+        });
+    }
+
+    private string GetPlatformBadgeClass(string platform)
+    {
+        return platform.ToLowerInvariant() switch
+        {
+            "twitch" => "message-platform-badge twitch-badge",
+            "youtube" => "message-platform-badge youtube-badge",
+            "kick" => "message-platform-badge kick-badge",
+            _ => "message-platform-badge"
+        };
+    }
+
+    private string GetPlatformShortName(string platform)
+    {
+        return platform.ToLowerInvariant() switch
+        {
+            "twitch" => "T",
+            "youtube" => "▶",
+            "kick" => "K",
+            _ => "?"
+        };
+    }
+
+    public void Dispose()
+    {
+        if (_twitchChatService is not null)
+        {
+            _twitchChatService.MessageReceived -=
+                OnMessageReceived;
+        }
+
+        if (_youtubeChatService is not null)
+        {
+            _youtubeChatService.MessageReceived -=
+                OnMessageReceived;
+        }
+
+        if (_kickChatService is not null)
+        {
+            _kickChatService.MessageReceived -=
+                OnMessageReceived;
+        }
+    }
+}

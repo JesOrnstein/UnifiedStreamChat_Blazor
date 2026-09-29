@@ -1,0 +1,190 @@
+@page "/kick-connect"
+@rendermode InteractiveServer
+@inject NavigationManager NavigationManager
+
+<PageTitle>Connect Kick Account</PageTitle>
+
+<div class="kick-auth-wrapper">
+    <div class="kick-auth-card">
+        
+        <div class="kick-logo">KICK<span class="beta-tag">BETA</span></div>
+        
+        <h2 class="title">UnifiedStreamChatApp wants to access your Kick Account</h2>
+        <p class="subtitle">Please enter your username to allow UnifiedStreamChatApp to:</p>
+
+        <div class="input-section">
+            <input type="text" @bind="KickUsername" placeholder="Enter Kick Username (e.g. kofot)" class="kick-input" />
+        </div>
+
+        <div class="permissions">
+            <label class="permission-item">
+                <input type="checkbox" checked disabled />
+                <span>Read user information (including email address)</span>
+            </label>
+            <label class="permission-item">
+                <input type="checkbox" checked disabled />
+                <span>Subscribe to events (read chat feed, follows, subscribes, gifts)</span>
+            </label>
+        </div>
+
+        <p class="disclaimer">
+            Make sure you trust UnifiedStreamChatApp, you may be sharing sensitive information about your Kick Account. 
+            You can revoke access to UnifiedStreamChatApp via 'Connections' in your account settings at any time.
+        </p>
+
+        <div class="actions">
+            <a href="/" class="btn-cancel">Cancel</a>
+            <button @onclick="ProceedToAuth" class="btn-allow">Allow Access</button>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    /* Styling som efterliknar bilden */
+    .kick-auth-wrapper {
+        background: linear-gradient(90deg, #1f271b 0%, #171813 50%, #111111 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Inter', sans-serif;
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 1000; /* Täcker huvudappen */
+    }
+
+    .kick-auth-card {
+        background-color: #191b1f;
+        border-radius: 8px;
+        padding: 40px;
+        max-width: 480px;
+        width: 100%;
+        color: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .kick-logo {
+        color: #53f622;
+        font-weight: 900;
+        font-size: 28px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .beta-tag {
+        font-size: 10px;
+        color: #fff;
+        margin-left: 4px;
+        margin-top: 2px;
+    }
+
+    .title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+        line-height: 1.4;
+    }
+
+    .subtitle {
+        font-size: 0.9rem;
+        color: #a0a0a0;
+        margin-bottom: 20px;
+    }
+
+    .input-section {
+        margin-bottom: 25px;
+    }
+
+    .kick-input {
+        width: 100%;
+        background-color: #0b0e0f;
+        border: 1px solid #333;
+        color: white;
+        padding: 12px 15px;
+        border-radius: 4px;
+        font-size: 1rem;
+        box-sizing: border-box;
+    }
+    
+    .kick-input:focus {
+        outline: 1px solid #53f622;
+        border-color: #53f622;
+    }
+
+    .permissions {
+        margin-bottom: 25px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .permission-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 0.85rem;
+        color: #e0e0e0;
+    }
+
+    .permission-item input[type="checkbox"] {
+        accent-color: #53f622;
+        margin-top: 3px;
+    }
+
+    .disclaimer {
+        font-size: 0.75rem;
+        color: #888;
+        margin-bottom: 30px;
+        line-height: 1.5;
+    }
+
+    .actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .btn-cancel {
+        color: #e0e0e0;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-cancel:hover {
+        text-decoration: underline;
+    }
+
+    .btn-allow {
+        background-color: #53f622;
+        color: #000;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 4px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .btn-allow:hover {
+        background-color: #45de1a;
+    }
+</style>
+
+@code {
+    private string KickUsername { get; set; } = "";
+
+    private void ProceedToAuth()
+    {
+        if (!string.IsNullOrWhiteSpace(KickUsername))
+        {
+            // Skickar vidare användaren till backend-rutten vi byggde tidigare!
+            NavigationManager.NavigateTo($"/auth/kick/login?channel={Uri.EscapeDataString(KickUsername.Trim())}", forceLoad: true);
+        }
+    }
+}
